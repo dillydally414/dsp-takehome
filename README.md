@@ -4,6 +4,8 @@ This take-home assignment was completed using Typescript.
 
 ## Setup/Installation
 
+This project requires Node v18 or greater.
+
 Ensure `yarn` is installed on your computer by running `yarn --version`. If it is not, install it via `npm install --global yarn`.
 
 Once `yarn` is installed, run `yarn install` to install the necessary packages.
