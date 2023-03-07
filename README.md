@@ -8,6 +8,12 @@ Ensure `yarn` is installed on your computer by running `yarn --version`. If it i
 
 Once `yarn` is installed, run `yarn install` to install the necessary packages.
 
+Create a `.env` file in the root directory with the following contents:
+
+```
+MBTA_API_KEY=??? # Add an API key here
+```
+
 ## Directory Structure
 
 Source code is located in the `src` folder. Tests are located in the `tests` folder.
