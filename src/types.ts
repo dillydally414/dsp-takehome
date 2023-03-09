@@ -1,5 +1,9 @@
-/** Contains types representing responses from the MBTA API */
+/** Contains types representing interactions with the MBTA API */
 namespace API {
+  export type FilterQueryParams = {
+    [key: string]: string | number | string[] | number[];
+  };
+
   /** Error type that can be returned by the API */
   type MBTAError = {
     code: string;

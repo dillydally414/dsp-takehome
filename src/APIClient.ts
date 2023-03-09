@@ -4,13 +4,13 @@ dotenv.config();
 
 /** The API Client for interacting with the MBTA API */
 class APIClient {
-  /** Serves as a middleware for fetch that wraps in the prefix, headers, and query string */
-  async fetch(
-    route: string,
-    queryFilters?: {
-      [key: string]: string | number | string[] | number[];
-    }
-  ) {
+  /** Serves as a middleware for fetch that wraps in the prefix, headers, and query string.
+   * Currently only filtering operations are supported, but extensions such as sorting responses would be
+   * a natural extension of the query params.
+   * @param route The route to fetch from the v3 MBTA API
+   * @param queryFilters optional filtering conditions, represented as an object mapping query keys to values
+   */
+  async fetch(route: string, queryFilters?: API.FilterQueryParams) {
     // converts filtering conditions into the query string
     const queryString = Object.entries(queryFilters || {})
       .map(([key, value]) => {
@@ -64,9 +64,9 @@ class APIClient {
    * Gets all routes that match optional filtering conditions.
    * @param queryFilters optional filtering conditions, represented as an object mapping query keys to values
    */
-  async getRoutes(queryFilters?: {
-    [key: string]: string | number | string[] | number[];
-  }): Promise<API.RouteResource[]> {
+  async getRoutes(
+    queryFilters?: API.FilterQueryParams
+  ): Promise<API.RouteResource[]> {
     try {
       const response = (await this.fetch(
         "/routes",
@@ -94,9 +94,9 @@ class APIClient {
    * Gets all stops that match optional filtering conditions.
    * @param queryFilters optional filtering conditions, represented as an object mapping query keys to values
    */
-  async getStopsMatching(queryFilters?: {
-    [key: string]: string | number | string[] | number[];
-  }): Promise<API.StopResource[]> {
+  async getStopsMatching(
+    queryFilters?: API.FilterQueryParams
+  ): Promise<API.StopResource[]> {
     try {
       const response = (await this.fetch(
         "/stops",
@@ -115,6 +115,7 @@ class APIClient {
   > {
     const subwayRoutes = await this.getSubwayRoutes();
     const routeToStops: Map<API.RouteResource, API.StopResource[]> = new Map();
+    // individually retrieve all stops for each route
     const promiseList = subwayRoutes.map(async (route) => {
       return this.getStopsMatching({
         route: route.id,
@@ -122,6 +123,7 @@ class APIClient {
         routeToStops.set(route, stops);
       });
     });
+    // ensure all fetch requests have been completed
     await Promise.all(promiseList);
     return routeToStops;
   }

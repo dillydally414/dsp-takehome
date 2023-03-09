@@ -40,11 +40,13 @@ class MBTAInfo {
     };
     for (const [route, stops] of routeToStops.entries()) {
       if (mostStops.lineName === "" || mostStops.stopCount < stops.length) {
+        // update mostStops with the new largest amount
         mostStops = {
           lineName: route.attributes.long_name,
           stopCount: stops.length,
         };
       } else if (mostStops.stopCount === stops.length) {
+        // add this route to the name to acknowledge tie
         mostStops.lineName = `${mostStops.lineName}, ${route.attributes.long_name}`;
       }
     }
@@ -65,11 +67,13 @@ class MBTAInfo {
     };
     for (const [route, stops] of routeToStops.entries()) {
       if (fewestStops.lineName === "" || fewestStops.stopCount > stops.length) {
+        // update fewestStops with the new smallest amount
         fewestStops = {
           lineName: route.attributes.long_name,
           stopCount: stops.length,
         };
       } else if (fewestStops.stopCount === stops.length) {
+        // add this route to the name to acknowledge tie
         fewestStops.lineName = `${fewestStops.lineName}, ${route.attributes.long_name}`;
       }
     }
@@ -166,6 +170,7 @@ class MBTAInfo {
    * @param end the ID or name of the ending stop
    */
   async findTrip(start: string, end: string): Promise<Internal.Trip> {
+    // retrieve route to stops mapping and generate list of transfer stations
     const routeToStops: Map<API.RouteResource, API.StopResource[]> =
       await APIClient.getSubwayStopsByRoute();
     const allStops = _.flatten([...routeToStops.values()]);
@@ -180,6 +185,7 @@ class MBTAInfo {
       )
     );
 
+    // find the actual stop resources for the provided start and end, if not found throw an error
     const startStop = allStops.find(
       (stop) =>
         stop.attributes.name.toUpperCase() === start.toUpperCase() ||
@@ -227,6 +233,7 @@ class MBTAInfo {
       });
     };
 
+    // set up parent mapping, queue, and list of unvisited stops
     const stopToPrev = new Map<string, { stop: string; line: string }>();
     const queue = [startStop];
     let remainingStops = [endStop, ...transferStops].map((stop) => ({
