@@ -1,4 +1,4 @@
-/** Contains types for interacting with the MBTA API */
+/** Contains types representing responses from the MBTA API */
 namespace API {
   /** Error type that can be returned by the API */
   type MBTAError = {
@@ -8,12 +8,24 @@ namespace API {
 
   /** Includes general info present on API responses */
   type JSONAPI = {
-    verison: string;
-    errors?: MBTAError[];
+    version: string;
+  };
+
+  /** Generalize the format of the MBTA API responses */
+  export type MBTAResponse<T> = JSONAPI &
+    ({ data: T } | { errors: MBTAError[] });
+
+  /** Some values common to all resources */
+  type Resource = {
+    id: string;
+    type: string;
+    links: {
+      self: string;
+    };
   };
 
   /** Represents a route as returned by the generic routes API  (`/routes`) */
-  export type RouteSummary = {
+  export type RouteResource = Resource & {
     attributes: {
       color: string;
       description: string;
@@ -26,22 +38,71 @@ namespace API {
       text_color: string;
       type: number;
     };
-    id: string;
-    links: {
-      self: string;
-    };
     relationships: {
       line: { data: { id: string; type: string } };
     };
-    type: string;
   };
 
   /** Response type of the routes api (`/routes`) */
-  export type RoutesResponse = JSONAPI & {
-    data: RouteSummary[];
+  export type RoutesResponse = MBTAResponse<RouteResource[]>;
+
+  /** Represents a stop as returned by the generic routes API  (`/stops`) */
+  export type StopResource = Resource & {
+    attributes: {
+      address: string;
+      at_street: string;
+      description: string;
+      latitude: number;
+      location_type: number;
+      longitude: number;
+      municipality: string;
+      name: string;
+      on_street: string;
+      platform_code: string;
+      platform_name: string;
+      vehicle_type: number;
+      wheelchair_boarding: number;
+    };
+    relationships: {
+      parent_station: {
+        links: {
+          self: string;
+          related: string;
+        };
+        data: {
+          type: string;
+          id: string;
+        };
+      };
+    };
   };
 
-  /** Represents an error thrown by our API Client */
+  /** Response type of the stops api (`/stops`) */
+  export type StopsResponse = MBTAResponse<StopResource[]>;
+}
+
+/** Contains types used internally in the handling and processing of API responses */
+namespace Internal {
+  /** Represents a subway line with a count of stops on that line */
+  export type LineStops = {
+    lineName: string;
+    stopCount: number;
+  };
+
+  /** Represents a station that connects two or more subway lines */
+  export type TransferStation = {
+    stationName: string;
+    lines: string[];
+  };
+
+  /** Represents a collection of information about the MBTA subway lines */
+  export type AggregateInfo = {
+    mostStops: LineStops;
+    fewestStops: LineStops;
+    transferStations: TransferStation[];
+  };
+
+  /** Represents an error thrown by our API Client and handled internally */
   export class CustomError extends Error {
     code: number;
 
@@ -52,4 +113,4 @@ namespace API {
   }
 }
 
-export { API };
+export { API, Internal };
