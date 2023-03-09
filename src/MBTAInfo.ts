@@ -9,7 +9,7 @@ class MBTAInfo {
     if (err instanceof Internal.CustomError) {
       return `An error occurred with status code ${err.code}: ${err.message}`;
     } else {
-      return "An unknown error occurred.";
+      return `An unknown error occurred.\n${err}`;
     }
   }
 
@@ -20,7 +20,7 @@ class MBTAInfo {
       const output: string = routes
         .map((route) => route.attributes.long_name)
         .join(", ");
-      return output;
+      return `Here is a list of all subway lines:\n${output}`;
     } catch (err) {
       return this.handleError(err);
     }
@@ -154,6 +154,150 @@ class MBTAInfo {
             }, which services the following lines: ${station.lines.join(", ")}`
         )
         .join("\n - ")}`;
+      return output;
+    } catch (err) {
+      return this.handleError(err);
+    }
+  }
+
+  /**
+   * Finds a subway trip from `start` to `end`.
+   * @param start the ID or name of the starting stop
+   * @param end the ID or name of the ending stop
+   */
+  async findTrip(start: string, end: string): Promise<Internal.Trip> {
+    const routeToStops: Map<API.RouteResource, API.StopResource[]> =
+      await APIClient.getSubwayStopsByRoute();
+    const allStops = _.flatten([...routeToStops.values()]);
+    const transferStations: Internal.TransferStation[] =
+      this.getTransferStations(routeToStops);
+    const transferStops: API.StopResource[] = _.compact(
+      transferStations.map((ts) =>
+        allStops.find(
+          (stop) =>
+            stop.attributes.name.toUpperCase() === ts.stationName.toUpperCase()
+        )
+      )
+    );
+
+    const startStop = allStops.find(
+      (stop) =>
+        stop.attributes.name.toUpperCase() === start.toUpperCase() ||
+        stop.id === start
+    );
+    if (startStop === undefined) {
+      throw new Internal.CustomError({
+        code: 400,
+        message: `Starting stop ${start} could not be found.`,
+      });
+    }
+    const endStop = allStops.find(
+      (stop) =>
+        stop.attributes.name.toUpperCase() === end.toUpperCase() ||
+        stop.id === end
+    );
+    if (endStop === undefined) {
+      throw new Internal.CustomError({
+        code: 400,
+        message: `Ending stop ${end} could not be found.`,
+      });
+    }
+
+    /** Gets the lines that a stop is on.
+     * @param stop the stop to search line for
+     */
+    const getLines = (stop: API.StopResource): string[] => {
+      const transfer = transferStations.find(
+        (ts) =>
+          ts.stationName.toUpperCase() === stop.attributes.name.toUpperCase()
+      );
+      if (transfer) {
+        return transfer.lines;
+      } else {
+        // it can only be part of one line if it's not a transfer so we can terminate early
+        for (const [route, stops] of routeToStops.entries()) {
+          if (stops.some((s) => s.id === stop.id)) {
+            return [route.attributes.long_name];
+          }
+        }
+      }
+      throw new Internal.CustomError({
+        code: 500,
+        message: `Could not determine what line ${stop.attributes.name} is on.`,
+      });
+    };
+
+    const stopToPrev = new Map<string, { stop: string; line: string }>();
+    const queue = [startStop];
+    let remainingStops = [endStop, ...transferStops].map((stop) => ({
+      stop: stop,
+      lines: getLines(stop),
+    }));
+    // using BFS as it's relatively simple and has the addest bonus of finding a trip with least # of transfers
+    // nodes are start, end, and transfers
+    // edges are routes (can go between nodes on same route)
+    // at each step (terminates when we've reached the end stop):
+    // 1. check if current and end are on the same line. if they are, this step will just be taking the line from the current to the end
+    // 2. if current and end are on different lines, check if there are any transfers from current's line to end's line.
+    // 3. use transfer station from current line to end's line if exists, otherwise
+    while (queue.length > 0) {
+      const [curr] = queue.splice(0, 1);
+      if (curr.id === endStop.id) {
+        // we have reached end, rebuild path from stopToPrev
+        let steps: (Internal.TripStep | undefined)[] = [
+          { stop: endStop.attributes.name, line: "" },
+        ];
+        while (stopToPrev.has(steps.at(-1)?.stop || "")) {
+          steps.push(stopToPrev.get(steps.at(-1)?.stop || ""));
+        }
+        return {
+          steps: _.compact(steps.reverse()),
+        };
+      } else {
+        // keep looking :(
+        for (const line of getLines(curr)) {
+          // find stops on the same line
+          const connections = remainingStops.filter((stop) =>
+            stop.lines.includes(line)
+          );
+          remainingStops = remainingStops.filter(
+            (stop) => !stop.lines.includes(line)
+          );
+          for (const connection of connections) {
+            stopToPrev.set(connection.stop.attributes.name, {
+              stop: curr.attributes.name,
+              line,
+            });
+          }
+          queue.push(...connections.map((c) => c.stop));
+        }
+      }
+    }
+    throw new Internal.CustomError({
+      code: 400,
+      message: `No subway trip could be found between ${start} and ${end}.`,
+    });
+  }
+
+  /**
+   * Finds a subway trip from `start` to `end` and returns a human-readable output.
+   * @param start the ID of the starting stop
+   * @param end the ID of the ending stop
+   * `${i}. Take the ${prev.line} from ${prev.stop} to ${next.stop}.`
+   */
+  async tripSummary(start: string, end: string): Promise<string> {
+    try {
+      const trip: Internal.Trip = await this.findTrip(start, end);
+      const output: string = `To get from ${trip.steps[0].stop} to ${
+        trip.steps.at(-1)?.stop
+      }, you can take the following trip:\n${trip.steps
+        .slice(0, -1)
+        .map((curr, i) => {
+          return `${i + 1}. Take the ${curr.line} from ${curr.stop} to ${
+            trip.steps[i + 1].stop
+          }.`;
+        })
+        .join("\n")}`;
       return output;
     } catch (err) {
       return this.handleError(err);

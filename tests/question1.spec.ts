@@ -15,10 +15,11 @@ test("Test Question 1 correct response", async () => {
     "Red Line",
     "Mattapan Trolley",
   ];
+  const actualNames = names.split("\n")[1].split(", ");
   // check that names is a subset of expected names
-  expect(names.split(", ")).toEqual(expect.arrayContaining(expectedNames));
+  expect(actualNames).toEqual(expect.arrayContaining(expectedNames));
   // check that expected names is a subset of names
-  expect(expectedNames).toEqual(expect.arrayContaining(names.split(", ")));
+  expect(expectedNames).toEqual(expect.arrayContaining(actualNames));
 
   console.log(`Question 1 output: ${names}`);
 });

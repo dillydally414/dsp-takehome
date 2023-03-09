@@ -102,6 +102,17 @@ namespace Internal {
     transferStations: TransferStation[];
   };
 
+  /** Represents a single leg on a trip, getting on a specified line at a specified stop */
+  export type TripStep = {
+    stop: string;
+    line: string;
+  };
+
+  /** Represents a trip from one stop to another */
+  export type Trip = {
+    steps: TripStep[];
+  };
+
   /** Represents an error thrown by our API Client and handled internally */
   export class CustomError extends Error {
     code: number;

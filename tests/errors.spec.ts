@@ -18,6 +18,11 @@ test("Test MBTA error response", async () => {
   expect(aggregateInfo).toBe(
     "An error occurred with status code 403: forbidden."
   );
+  const tripInfo = await MBTAInfo.tripSummary(
+    "Northeastern University",
+    "Downtown Crossing"
+  );
+  expect(tripInfo).toBe("An error occurred with status code 403: forbidden.");
 });
 
 test("Test unknown error response", async () => {
@@ -33,6 +38,13 @@ test("Test unknown error response", async () => {
   expect(aggregateInfo).toBe(
     "An error occurred with status code 500: Unexpected Error!"
   );
+  const tripInfo = await MBTAInfo.tripSummary(
+    "Northeastern University",
+    "Downtown Crossing"
+  );
+  expect(tripInfo).toBe(
+    "An error occurred with status code 500: Unexpected Error!"
+  );
 });
 
 test("Test empty error message", async () => {
@@ -44,6 +56,13 @@ test("Test empty error message", async () => {
   expect(names).toBe("An error occurred with status code 500: Internal Error.");
   const aggregateInfo = await MBTAInfo.aggregateInfo();
   expect(aggregateInfo).toBe(
+    "An error occurred with status code 500: Internal Error."
+  );
+  const tripInfo = await MBTAInfo.tripSummary(
+    "Northeastern University",
+    "Downtown Crossing"
+  );
+  expect(tripInfo).toBe(
     "An error occurred with status code 500: Internal Error."
   );
 });
