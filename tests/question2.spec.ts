@@ -27,7 +27,7 @@ const transfers = {
   Lechmere: greenLines.slice(2),
 };
 
-/** Determines if the line-by-line output of transfer stations matches the above expected output
+/** Determines if the line-by-line output of transfer stations matches the above expected output, in any order
  * @param transferStations the line-by-line output from {@link MBTAInfo.aggregateInfo()}, with the first two lines
  *                         of fewest and most stops omitted
  */
@@ -86,7 +86,7 @@ test("Test Question 2 transfer station mixups", async () => {
   const output = await MBTAInfo.aggregateInfo();
   const [_mostStops, _fewestStops, ...transferStations] = output.split("\n");
 
-  // check that transfer stations has the correct stations and correct lines
+  // wrong numbers of stations
   expect(correctTransferStations(transferStations.slice(2))).toBe(
     "Number of stations is not correct. Expected 14, received 12."
   );
@@ -97,6 +97,7 @@ test("Test Question 2 transfer station mixups", async () => {
     ])
   ).toBe("Number of stations is not correct. Expected 14, received 15.");
 
+  // different station
   expect(
     correctTransferStations([
       ...transferStations.filter(
@@ -108,6 +109,7 @@ test("Test Question 2 transfer station mixups", async () => {
     "Entry for Lechmere is either not present or not correct. Expected routes Green Line D, Green Line E."
   );
 
+  // line removed
   expect(
     correctTransferStations([
       ...transferStations.filter(
@@ -119,12 +121,25 @@ test("Test Question 2 transfer station mixups", async () => {
     "Entry for Lechmere is either not present or not correct. Expected routes Green Line D, Green Line E."
   );
 
+  // extra line included
   expect(
     correctTransferStations([
       ...transferStations.filter(
         (stationLine) => !stationLine.includes("Lechmere")
       ),
       " - Lechmere, which services the following lines: Green Line E, Green Line D, Green Line B",
+    ])
+  ).toBe(
+    "Entry for Lechmere is either not present or not correct. Expected routes Green Line D, Green Line E."
+  );
+
+  // line changed
+  expect(
+    correctTransferStations([
+      ...transferStations.filter(
+        (stationLine) => !stationLine.includes("Lechmere")
+      ),
+      " - Lechmere, which services the following lines: Green Line E, Green Line C",
     ])
   ).toBe(
     "Entry for Lechmere is either not present or not correct. Expected routes Green Line D, Green Line E."
