@@ -18,7 +18,13 @@ MBTA_API_KEY=??? # Add an API key here
 
 ## Directory Structure
 
-Source code is located in the `src` folder. Tests are located in the `tests` folder.
+Source code is located in the [`src`](src/) folder. Tests are located in the [`tests`](tests/) folder.
+
+Source code is split into 3 files:
+
+- [API Client](src/APIClient.ts) - this file defines the API client that interacts directly with the MBTA API via fetch requests.
+- [MBTA Info](src/MBTAInfo.ts) - this file defines some methods that reference the API client, process some of its output, and display the output in a human-readable manner
+- [types](src/types.ts) - this file contains type definitions, both those taken from the MBTA API (in namespace API) and those defined for internal use (in namespace Internal)
 
 ## Running Tests
 

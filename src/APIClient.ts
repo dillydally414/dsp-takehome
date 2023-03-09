@@ -81,8 +81,8 @@ class APIClient {
 
   /** Gets all "subway" routes - light rail (type 0) and heavy rail (type 1).
    * I decided to use the built in MBTA filtering as it has some capabilities that cannot be performed
-   * simply by filtering the response data (e.g. filtering stops by route). I also have designed my code such that it allows
-   * for future filtering and isn't limited to filtering by routes
+   * simply by filtering the response data locally (e.g. filtering stops by route, or filtering routes by service dates).
+   * I also have abstracted the design of my code such that it allows for future filtering and isn't limited to filtering by routes
    */
   async getSubwayRoutes(): Promise<API.RouteResource[]> {
     return this.getRoutes({

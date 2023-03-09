@@ -26,26 +26,19 @@ class MBTAInfo {
     }
   }
 
-  /** Returns some key information about the MBTA routes */
-  async collectAggregateInfo(): Promise<Internal.AggregateInfo> {
-    const routeToStops: Map<API.RouteResource, API.StopResource[]> =
-      await APIClient.getSubwayStopsByRoute();
+  /**
+   * Determines which route has the most stops. If two or more routes have the same number, all routes with that
+   * number of stops will be included in the output
+   * @param routeToStops a map from each route to stops on that route
+   */
+  getRoutesWithMostStops(
+    routeToStops: Map<API.RouteResource, API.StopResource[]>
+  ): Internal.LineStops {
     let mostStops: Internal.LineStops = {
       lineName: "",
       stopCount: 0,
     };
-    let fewestStops: Internal.LineStops = {
-      lineName: "",
-      stopCount: 0,
-    };
-    const stopToRoutes: Map<string, string[]> = new Map();
-    const idToStop: Map<string, API.StopResource> = new Map();
-    const idToRoute: Map<string, API.RouteResource> = new Map();
-
-    /** Ties for shortest and longest will result in a combination of names */
     for (const [route, stops] of routeToStops.entries()) {
-      idToRoute.set(route.id, route);
-      // update mostStops
       if (mostStops.lineName === "" || mostStops.stopCount < stops.length) {
         mostStops = {
           lineName: route.attributes.long_name,
@@ -54,8 +47,23 @@ class MBTAInfo {
       } else if (mostStops.stopCount === stops.length) {
         mostStops.lineName = `${mostStops.lineName}, ${route.attributes.long_name}`;
       }
+    }
+    return mostStops;
+  }
 
-      // update fewestStops
+  /**
+   * Determines which route has the fewest stops. If two or more routes have the same number, all routes with that
+   * number of stops will be included in the output
+   * @param routeToStops a map from each route to stops on that route
+   */
+  getRoutesWithFewestStops(
+    routeToStops: Map<API.RouteResource, API.StopResource[]>
+  ): Internal.LineStops {
+    let fewestStops: Internal.LineStops = {
+      lineName: "",
+      stopCount: 0,
+    };
+    for (const [route, stops] of routeToStops.entries()) {
       if (fewestStops.lineName === "" || fewestStops.stopCount > stops.length) {
         fewestStops = {
           lineName: route.attributes.long_name,
@@ -64,6 +72,23 @@ class MBTAInfo {
       } else if (fewestStops.stopCount === stops.length) {
         fewestStops.lineName = `${fewestStops.lineName}, ${route.attributes.long_name}`;
       }
+    }
+    return fewestStops;
+  }
+
+  /**
+   * Finds stops that are present on more than one route.
+   * @param routeToStops a map from each route to stops on that route
+   */
+  getTransferStations(
+    routeToStops: Map<API.RouteResource, API.StopResource[]>
+  ): Internal.TransferStation[] {
+    const stopToRoutes: Map<string, string[]> = new Map();
+    const idToStop: Map<string, API.StopResource> = new Map();
+    const idToRoute: Map<string, API.RouteResource> = new Map();
+
+    for (const [route, stops] of routeToStops.entries()) {
+      idToRoute.set(route.id, route);
 
       // add to reverse map, which will help check for transfer stations
       for (const stop of stops) {
@@ -94,10 +119,18 @@ class MBTAInfo {
       )
     );
 
+    return transferStations;
+  }
+
+  /** Returns some key information about the MBTA routes */
+  async collectAggregateInfo(): Promise<Internal.AggregateInfo> {
+    const routeToStops: Map<API.RouteResource, API.StopResource[]> =
+      await APIClient.getSubwayStopsByRoute();
+
     return {
-      mostStops,
-      fewestStops,
-      transferStations,
+      mostStops: this.getRoutesWithMostStops(routeToStops),
+      fewestStops: this.getRoutesWithFewestStops(routeToStops),
+      transferStations: this.getTransferStations(routeToStops),
     };
   }
 
